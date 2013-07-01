@@ -161,13 +161,14 @@ func Open(name string) (*connection, error) {
 	}
 
 	if keyspace != "" {
-		st, err := cn.Prepare(fmt.Sprintf("USE %s", keyspace))
+		body, err := cn.query(fmt.Sprintf("USE %s", keyspace))
 		if err != nil {
 			return nil, err
 		}
-		if _, err = st.Exec([]driver.Value{}); err != nil {
-			return nil, err
-		}
+
+        if binary.BigEndian.Uint32(body) != 0x3 {
+            return nil, fmt.Errorf("Expected set keyspace response")
+        }
 	}
 
 	return cn, nil
@@ -281,6 +282,25 @@ func (cn *connection) Rollback() error {
 		return driver.ErrBadConn
 	}
 	return nil
+}
+
+func (cn *connection) query(query string) ([]byte, error) {
+	body := make([]byte, len(query)+6)
+	binary.BigEndian.PutUint32(body[0:4], uint32(len(query)))
+	copy(body[4:], []byte(query))
+	binary.BigEndian.PutUint16(body[len(query) + 4:], uint16(cn.consistency))
+	if err := cn.send(opQuery, body); err != nil {
+		return nil, err
+	}
+	opcode, body, err := cn.recv()
+	if err != nil {
+		return nil, err
+	}
+	if opcode != opResult {
+		return nil, fmt.Errorf("expected op result")
+	}
+
+    return body, nil
 }
 
 func (cn *connection) Prepare(query string) (driver.Stmt, error) {
