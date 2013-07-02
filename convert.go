@@ -8,7 +8,7 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
-	"github.com/tux21b/gocql/uuid"
+	"github.com/vuleetu/gocql/uuid"
 	"math"
 	"reflect"
 	"strconv"
