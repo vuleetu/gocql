@@ -44,6 +44,8 @@ func decode(b []byte, t uint16) driver.Value {
 			return true
 		}
 		return false
+    case typeCounter:
+        return int64(binary.BigEndian.Uint64(b))
 	case typeBlob:
 		return b
 	case typeVarchar, typeText, typeAscii:
@@ -85,6 +87,8 @@ func (e *columnEncoder) ColumnConverter(idx int) ValueConverter {
 		return ValueConverter(encDouble)
 	case typeBool:
 		return ValueConverter(encBool)
+    case typeCounter:
+        return ValueConverter(encCounter)
 	case typeVarchar, typeText, typeAscii:
 		return ValueConverter(encVarchar)
 	case typeBlob:
@@ -121,6 +125,13 @@ func encInt(v interface{}) (driver.Value, error) {
 	}
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(x.(int64)))
+	return b, nil
+}
+
+func encCounter(v interface{}) (driver.Value, error) {
+	x := reflect.Indirect(reflect.ValueOf(v)).Interface()
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(x.(int64)))
 	return b, nil
 }
 
